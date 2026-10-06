@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { CalendarDays, Clock3, Download, Pencil, Check, Coffee, BookOpen, X, ChevronRight, Sun, CheckCircle2, Users } from 'lucide-react';
+import { CalendarDays, Clock3, Download, Pencil, Check, Coffee, BookOpen, X, ChevronRight, Sun, CheckCircle2 } from 'lucide-react';
 import { registerSW } from 'virtual:pwa-register';
 import { DAYS, blankContents, slotsFor, getStatus, formatTime, type Contents, type Slot } from './schedule';
 import './style.css';
 import { DataManager } from './DataManager';
-import { TeacherList, TeacherTracker } from './TeacherTracker';
+import { TeacherTracker } from './TeacherTracker';
+import { Sidebar } from './Sidebar';
 import { resolveLesson, type School } from './school';
 import { getEditingKey, unlockEditing, EDIT_KEY, useSharedSchool } from './useSharedSchool';
 registerSW({ onRegisterError(error) { console.warn('Offline setup unavailable',error); } });
@@ -52,7 +53,7 @@ function App() {
  async function save(){try{await changeSchool({...school,classes:{...school.classes,[school.selectedClass]:draft}});setEditing(false);}catch(error){setMessage((error as Error).message);}}
  async function install(){if(installEvent){await installEvent.prompt();const choice=await installEvent.userChoice;setInstallEvent(null);if(choice.outcome==='accepted')dialog.current?.close();}else dialog.current?.showModal();}
  return <div className="app-shell">
-  <aside className="sidebar"><a className="brand" href="/" aria-label="Dayline home"><span className="brand-icon"><CalendarDays size={23}/></span>dayline<span className="brand-dot">.</span></a><div className="sidebar-caption">YOUR DAILY RHYTHM</div><nav className="side-nav" aria-label="Main navigation"><a className={!dataPage&&!teacherPage?'nav-active':'nav-item'} href="/"><CalendarDays size={19}/> Dashboard</a><a className={dataPage?'nav-active':'nav-item'} href="/data"><BookOpen size={19}/> Data management</a><a className={teacherPage?'nav-active':'nav-item'} href="/teachers"><Users size={19}/> Teacher tracker</a></nav>{shared.hasData&&<TeacherList school={school} selectedCode={teacherPage?teacherCode:undefined} compact/>}<div className="sidebar-bottom"><div className="mini-calendar"><Sun size={23}/><p>A little structure.<br/><strong>A clearer day.</strong></p></div><p className="sidebar-note">Monday – Friday<br/>One day at a time.</p></div></aside>
+  <Sidebar school={school} hasData={shared.hasData} dataPage={dataPage} teacherPage={teacherPage} teacherCode={teacherCode}/>
   <div className="main-shell"><header className="topbar"><nav className="top-navigation"><a href="/" aria-current={!dataPage&&!teacherPage?'page':undefined}>Dashboard</a><ChevronRight size={14}/><a href="/data" aria-current={dataPage?'page':undefined}>Manage data</a><ChevronRight size={14}/><a href="/teachers" aria-current={teacherPage?'page':undefined}>Teachers</a></nav><button className="install-button" onClick={()=>void install()} disabled={installed}><Download size={16}/>{installed?'Installed':'Install app'}</button></header>
   <main><div className="page-heading"><div><div className="eyebrow">{teacherPage?'FOLLOW THE TEACHING DAY':dataPage?'SHARED SCHOOL DATA':'MAKE TIME FOR YOUR DAY'}</div><h1>{teacherPage?'Teacher tracker':dataPage?'Manage your school':'Your day, at a glance'}<span>.</span></h1><p>{teacherPage?'See each teacher’s previous, current, and next class.':dataPage?'Upload spreadsheets and keep teachers and lessons up to date.':'Stay in the moment. Know what’s coming next.'}</p></div><div className="live-clock"><div><span className="live-dot"/> LOCAL TIME</div><time>{now.toLocaleTimeString('en-GB',{hour12:false})}</time><p>{now.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'})}</p></div></div>
   {shared.error&&<div className="sync-notice" role="status"><p>{shared.hasData?'Showing the last cached timetable. ':''}{shared.error}</p><button className="button" disabled={shared.loading||shared.saving||editing} onClick={()=>void shared.refresh()}>Reload shared data</button></div>}

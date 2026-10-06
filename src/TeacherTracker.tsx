@@ -9,8 +9,8 @@ export function TeacherList({ school, selectedCode, compact = false }: { school:
  const teachers = useMemo(() => [...school.teachers].sort((a, b) => a.teacher.localeCompare(b.teacher)), [school.teachers]);
  const filtered = teachers.filter(teacher => `${teacher.teacher} ${teacher.subject} ${teacher.code}`.toLowerCase().includes(search.toLowerCase()));
  return <div className={compact ? 'sidebar-teachers' : 'teacher-directory'}>
-  <label className="sr-only" htmlFor={compact ? 'sidebar-teacher-search' : 'teacher-search'}>Search teachers</label>
-  <input id={compact ? 'sidebar-teacher-search' : 'teacher-search'} type="search" placeholder="Search teachers…" value={search} onChange={event => setSearch(event.target.value)}/>
+  {!compact && <><label className="sr-only" htmlFor="teacher-search">Search teachers</label>
+  <input id="teacher-search" type="search" placeholder="Search teachers…" value={search} onChange={event => setSearch(event.target.value)}/></>}
   <nav className="teacher-links" aria-label={compact ? 'Teachers in sidebar' : 'Teacher directory'}>
    {filtered.map(teacher => <a key={teacher.code} href={`/teachers/${teacher.code}`} aria-current={selectedCode === teacher.code ? 'page' : undefined}><span><strong>{teacher.teacher}</strong><small>{teacher.subject} · {teacher.code}</small></span><ChevronRight size={14}/></a>)}
   </nav>
