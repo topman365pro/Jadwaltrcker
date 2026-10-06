@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { BookOpen, ChevronRight, Users } from 'lucide-react';
-import { formatTime } from './schedule';
+import { DAYS, formatTime } from './schedule';
 import type { School } from './school';
-import { getTeacherStatus, type TeacherLesson } from './teacherTracker';
+import { getTeacherStatus, getTeacherWeek, type TeacherLesson } from './teacherTracker';
 
 export function TeacherList({ school, selectedCode, compact = false }: { school: School; selectedCode?: string; compact?: boolean }) {
  const [search, setSearch] = useState('');
@@ -24,6 +24,27 @@ function LessonSummary({ lessons }: { lessons: TeacherLesson[] }) {
  return <><strong>{lessons.map(lesson => lesson.className).join(' / ')}</strong><span>{first.start.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} · {formatTime(first.slot.start)} – {formatTime(first.slot.end)}</span></>;
 }
 
+function TeacherSchedule({ school, code, now }: { school: School; code: string; now: Date }) {
+ const [day, setDay] = useState(() => Math.min(4, Math.max(0, now.getDay() - 1)));
+ const week = useMemo(() => getTeacherWeek(school, code), [school, code]);
+ const today = now.getDay() - 1;
+ const minute = now.getHours() * 60 + now.getMinutes();
+ return <section className="schedule-panel teacher-week" aria-label="Teacher weekly schedule">
+  <div className="schedule-heading"><div><h2>Weekly teaching schedule</h2><p>All assigned classes, Monday through Friday.</p></div></div>
+  <div className="weekday-tabs" role="tablist" aria-label="Teaching weekday">{DAYS.map((name, index) => <button key={name} id={`teacher-tab-${index}`} role="tab" tabIndex={day === index ? 0 : -1} aria-selected={day === index} aria-controls="teacher-day-panel" className={day === index ? 'selected' : ''} onClick={() => setDay(index)} onKeyDown={event => {
+   const next = event.key === 'ArrowRight' ? (index + 1) % 5 : event.key === 'ArrowLeft' ? (index + 4) % 5 : event.key === 'Home' ? 0 : event.key === 'End' ? 4 : null;
+   if (next !== null) { event.preventDefault(); setDay(next); document.getElementById(`teacher-tab-${next}`)?.focus(); }
+  }}>{name}<span className="day-short">{name.slice(0, 3)}</span>{index === today && <span className="today-dot" aria-label="Today"/>}</button>)}</div>
+  <div id="teacher-day-panel" role="tabpanel" aria-labelledby={`teacher-tab-${day}`}>
+   <div className="day-summary"><div><strong>{DAYS[day]}</strong><span>{week[day].lessons.length} teaching timeslots</span></div>{day === today && <span className="today-badge">TODAY</span>}</div>
+   {week[day].lessons.length ? <div className="teacher-schedule-table"><table><thead><tr><th scope="col">TIME</th><th scope="col">CLASS</th><th scope="col">SLOT</th></tr></thead><tbody>{week[day].lessons.map(({ slot, classes }) => {
+    const active = day === today && minute >= slot.start && minute < slot.end;
+    return <tr key={slot.id} className={active ? 'active-row' : undefined}><td className="row-time">{formatTime(slot.start)} – {formatTime(slot.end)}</td><td><strong>{classes.join(' / ')}</strong>{active && <span className="now-badge">Now</span>}{classes.length > 1 && <small className="teacher-overlap">Overlapping assignments</small>}</td><td className="slot-number">{String(slot.number).padStart(2, '0')}</td></tr>;
+   })}</tbody></table></div> : <p className="teacher-day-empty">No teaching classes scheduled for {DAYS[day]}.</p>}
+  </div>
+ </section>;
+}
+
 export function TeacherTracker({ school, code, now }: { school: School; code?: string; now: Date }) {
  const teacher = school.teachers.find(teacher => teacher.code === code);
  const minute = Math.floor(now.getTime() / 60000);
@@ -38,5 +59,6 @@ export function TeacherTracker({ school, code, now }: { school: School; code?: s
    {status.current.length > 0 && <p className="slot-time">{formatTime(status.current[0].slot.start)} – {formatTime(status.current[0].slot.end)} · Timeslot {status.current[0].slot.number}</p>}
    {status.current.length > 1 && <p className="teacher-conflict" role="status">Multiple classes are assigned to this teacher at this time. Check the shared timetable.</p>}
   </article>
+  <TeacherSchedule key={teacher.code} school={school} code={teacher.code} now={now}/>
  </section>;
 }

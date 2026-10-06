@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { blankContents } from './schedule';
 import type { School } from './school';
-import { getTeacherStatus } from './teacherTracker';
+import { getTeacherStatus, getTeacherWeek } from './teacherTracker';
 
 function fixture(): School {
  const a = blankContents(), b = blankContents();
@@ -34,4 +34,16 @@ test('includes co-teaching codes, exposes simultaneous assignments and handles u
  school.classes['10 B'].Monday[2] = '02';
  assert.equal(getTeacherStatus(school, '02', new Date(2026, 9, 5, 8, 30)).current.length, 2);
  assert.deepEqual(getTeacherStatus(school, '99', new Date(2026, 9, 5, 8)), { current: [], previous: [], next: [] });
+});
+
+test('weekly schedule groups classes by timeslot, includes co-teaching and respects Friday hours', () => {
+ const school = fixture();
+ school.classes['10 B'].Monday[2] = '01';
+ const week = getTeacherWeek(school, '01');
+ assert.deepEqual(week.map(day => day.day), ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']);
+ assert.deepEqual(week[0].lessons.map(lesson => [lesson.slot.number, lesson.classes]), [[1, ['10 A']], [2, ['10 B']], [3, ['10 A', '10 B']]]);
+ assert.equal(week[1].lessons.length, 0);
+ assert.deepEqual(week[4].lessons.map(lesson => lesson.slot.number), [8]);
+ assert.equal(getTeacherWeek(school, '02')[0].lessons[0].slot.number, 3);
+ assert.ok(getTeacherWeek(school, '99').every(day => day.lessons.length === 0));
 });

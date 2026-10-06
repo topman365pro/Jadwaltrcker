@@ -3,18 +3,30 @@ import { codesIn, type School } from './school';
 
 export type TeacherLesson = { className: string; slot: Slot; start: Date; end: Date };
 
+export function getTeacherWeek(school: School, code: string) {
+ return DAYS.map((day, index) => ({
+  day,
+  lessons: slotsFor(index + 1).filter(slot => slot.number).flatMap(slot => {
+   const classes = Object.entries(school.classes)
+    .filter(([, contents]) => codesIn(contents[day]?.[slot.number! - 1] || '').includes(code))
+    .map(([name]) => name)
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+   return classes.length ? [{ slot, classes }] : [];
+  }),
+ }));
+}
+
 // Include the adjacent weeks so previous/next also work outside school hours.
 export function getTeacherStatus(school: School, code: string, now: Date) {
  const lessons: TeacherLesson[] = [];
+ const week = getTeacherWeek(school, code);
  for (let offset = -7; offset <= 7; offset++) {
   const date = new Date(now);
   date.setDate(date.getDate() + offset);
-  const day = DAYS[date.getDay() - 1];
+  const day = week[date.getDay() - 1];
   if (!day) continue;
-  for (const slot of slotsFor(date.getDay())) {
-   if (!slot.number) continue;
-   for (const [className, contents] of Object.entries(school.classes)) {
-    if (!codesIn(contents[day]?.[slot.number - 1] || '').includes(code)) continue;
+  for (const { slot, classes } of day.lessons) {
+   for (const className of classes) {
     const start = new Date(date), end = new Date(date);
     start.setHours(Math.floor(slot.start / 60), slot.start % 60, 0, 0);
     end.setHours(Math.floor(slot.end / 60), slot.end % 60, 0, 0);
