@@ -1,11 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { BookOpen, CalendarDays, Sun, Users, X } from 'lucide-react';
-import { TeacherList } from './TeacherTracker';
-import type { School } from './school';
 
-type SidebarProps = { school: School; hasData: boolean; dataPage: boolean; teacherPage: boolean; teacherCode?: string };
+type SidebarProps = { dataPage: boolean; teacherPage: boolean };
 
-function SidebarContent({ school, hasData, dataPage, teacherPage, teacherCode }: SidebarProps) {
+function SidebarContent({ dataPage, teacherPage }: SidebarProps) {
  return <>
   <div className="sidebar-caption">YOUR DAILY RHYTHM</div>
   <nav className="side-nav" aria-label="Main navigation">
@@ -13,7 +11,6 @@ function SidebarContent({ school, hasData, dataPage, teacherPage, teacherCode }:
    <a className={dataPage ? 'nav-active' : 'nav-item'} href="/data"><BookOpen size={19}/> Data management</a>
    <a className={teacherPage ? 'nav-active' : 'nav-item'} href="/teachers"><Users size={19}/> Teacher tracker</a>
   </nav>
-  {hasData && <TeacherList school={school} selectedCode={teacherPage ? teacherCode : undefined} compact/>}
   <div className="sidebar-bottom"><div className="mini-calendar"><Sun size={23}/><p>A little structure.<br/><strong>A clearer day.</strong></p></div><p className="sidebar-note">Monday – Friday<br/>One day at a time.</p></div>
  </>;
 }
