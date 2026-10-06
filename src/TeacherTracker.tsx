@@ -1,0 +1,42 @@
+import { useMemo, useState } from 'react';
+import { BookOpen, ChevronRight, Users } from 'lucide-react';
+import { formatTime } from './schedule';
+import type { School } from './school';
+import { getTeacherStatus, type TeacherLesson } from './teacherTracker';
+
+export function TeacherList({ school, selectedCode, compact = false }: { school: School; selectedCode?: string; compact?: boolean }) {
+ const [search, setSearch] = useState('');
+ const teachers = useMemo(() => [...school.teachers].sort((a, b) => a.teacher.localeCompare(b.teacher)), [school.teachers]);
+ const filtered = teachers.filter(teacher => `${teacher.teacher} ${teacher.subject} ${teacher.code}`.toLowerCase().includes(search.toLowerCase()));
+ return <div className={compact ? 'sidebar-teachers' : 'teacher-directory'}>
+  <label className="sr-only" htmlFor={compact ? 'sidebar-teacher-search' : 'teacher-search'}>Search teachers</label>
+  <input id={compact ? 'sidebar-teacher-search' : 'teacher-search'} type="search" placeholder="Search teachers…" value={search} onChange={event => setSearch(event.target.value)}/>
+  <nav className="teacher-links" aria-label={compact ? 'Teachers in sidebar' : 'Teacher directory'}>
+   {filtered.map(teacher => <a key={teacher.code} href={`/teachers/${teacher.code}`} aria-current={selectedCode === teacher.code ? 'page' : undefined}><span><strong>{teacher.teacher}</strong><small>{teacher.subject} · {teacher.code}</small></span><ChevronRight size={14}/></a>)}
+  </nav>
+  {!filtered.length && <p className="teacher-empty">{school.teachers.length ? 'No matching teachers.' : 'No teachers have been added yet.'}</p>}
+ </div>;
+}
+
+function LessonSummary({ lessons }: { lessons: TeacherLesson[] }) {
+ if (!lessons.length) return <span>No class scheduled</span>;
+ const first = lessons[0];
+ return <><strong>{lessons.map(lesson => lesson.className).join(' / ')}</strong><span>{first.start.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} · {formatTime(first.slot.start)} – {formatTime(first.slot.end)}</span></>;
+}
+
+export function TeacherTracker({ school, code, now }: { school: School; code?: string; now: Date }) {
+ const teacher = school.teachers.find(teacher => teacher.code === code);
+ const minute = Math.floor(now.getTime() / 60000);
+ const status = useMemo(() => code ? getTeacherStatus(school, code, new Date(minute * 60000)) : null, [school, code, minute]);
+ if (!code) return <section className="schedule-panel teacher-directory-panel"><div className="schedule-heading"><div><h2>Find a teacher</h2><p>Choose a teacher to see where they’re teaching now.</p></div><Users size={24}/></div><TeacherList school={school}/></section>;
+ if (!teacher || !status) return <section className="loading-panel"><p>This teacher is no longer in the shared timetable.</p><a className="button" href="/teachers">View all teachers</a></section>;
+ return <section className="teacher-tracker" aria-label={`${teacher.teacher} class tracker`}>
+  <div className="teacher-heading"><div><h2>{teacher.teacher}</h2><p>{teacher.subject} · Teacher {teacher.code}</p></div><a className="button" href="/teachers">All teachers</a></div>
+  <div className="teacher-context"><div><small>PREVIOUS CLASS</small><LessonSummary lessons={status.previous}/></div><div><small>NEXT CLASS</small><LessonSummary lessons={status.next}/></div></div>
+  <article className="current-card teacher-current"><div className="card-label"><span className="current-dot"/>CURRENT CLASS<span className="pill">{status.current.length ? 'Teaching now' : 'Free time'}</span></div><div className="status-title"><h2>{status.current.length ? status.current.map(lesson => lesson.className).join(' / ') : 'Not teaching right now'}</h2><span className="card-symbol"><BookOpen size={29}/></span></div>
+   <p className="lesson-teacher">{status.current.length ? teacher.subject : status.next.length ? 'Your next scheduled class is shown above.' : 'No lessons are assigned to this teacher in the weekly timetable.'}</p>
+   {status.current.length > 0 && <p className="slot-time">{formatTime(status.current[0].slot.start)} – {formatTime(status.current[0].slot.end)} · Timeslot {status.current[0].slot.number}</p>}
+   {status.current.length > 1 && <p className="teacher-conflict" role="status">Multiple classes are assigned to this teacher at this time. Check the shared timetable.</p>}
+  </article>
+ </section>;
+}
