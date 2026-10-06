@@ -8,13 +8,13 @@ export function slotsFor(day: number): Slot[] {
   if (day < 1 || day > 5) return [];
   return [...CLASS_SLOTS.slice(0,day === 5 ? 8 : 10),{id:'break-1',label:'Break 1',start:555,end:570,kind:'break' as const},{id:'break-2',label:'Break 2',start:705,end:765,kind:'break' as const}].sort((a,b) => a.start-b.start);
 }
-export function getStatus(now: Date) {
+export function getStatus(now: Date, nextClassesOnly = false) {
   const minuteNow = now.getHours()*60 + now.getMinutes()+now.getSeconds()/60;
   const slots = slotsFor(now.getDay());
   const current = slots.find(s => minuteNow >= s.start && minuteNow < s.end) ?? null;
   for(let offset=0;offset<=7;offset++) {
     const date = new Date(now); date.setDate(date.getDate()+offset);
-    const next = slotsFor(date.getDay()).find(s => offset > 0 || s.start > minuteNow);
+    const next = slotsFor(date.getDay()).find(s => (!nextClassesOnly || s.kind === 'class') && (offset > 0 || s.start > minuteNow));
     if(next) { const at = new Date(date); at.setHours(Math.floor(next.start/60),next.start%60,0,0); return {current,next,nextAt:at,minuteNow}; }
   }
   return {current,next:null,nextAt:null,minuteNow};
