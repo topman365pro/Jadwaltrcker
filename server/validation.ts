@@ -1,5 +1,5 @@
 import { DAYS, type Contents } from '../src/schedule.js';
-import { validateTeachers, type Teacher } from '../src/school.js';
+import { validateTeachers, type Teacher } from '../src/teachers.js';
 export type SharedSchool={teachers:Teacher[];classes:Record<string,Contents>;revision:number};
 export class InputError extends Error {}
 export function validateSharedSchool(value:unknown):SharedSchool {

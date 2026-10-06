@@ -1,0 +1,9 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readApiResponse, parseSnapshot, requestSchool } from './apiClient';
+import { initialSchool } from './school';
+test('plain-text function crashes produce a clear error instead of a browser parser exception',async()=>{await assert.rejects(readApiResponse(new Response('FUNCTION_INVOCATION_FAILED',{status:500})),/schedule server could not start/);const safariResponse=new Response('',{status:500});safariResponse.json=async()=>{throw new SyntaxError('The string did not match the expected pattern.');};await assert.rejects(readApiResponse(safariResponse),/schedule server could not start/);});
+test('HTML or empty successful API responses are rejected safely',async()=>{for(const body of ['<html>Not the API</html>',''])await assert.rejects(readApiResponse(new Response(body)),/unreadable response/);});
+test('preserves actionable JSON errors from server responses',async()=>{await assert.rejects(readApiResponse(Response.json({error:'Reload latest data before saving.'},{status:409})),/Reload latest/);});
+test('validates loaded data before updating the dashboard or offline cache',()=>{const expected={...structuredClone(initialSchool),revision:3};assert.equal(parseSnapshot(expected).revision,3);for(const value of [null,{}, {authorized:true},{...expected,classes:{}},{...expected,revision:0}])assert.throws(()=>parseSnapshot(value),/incomplete timetable/);const broken=structuredClone(expected);broken.classes['X.1'].Monday[0]=null as unknown as string;assert.throws(()=>parseSnapshot(broken),/incomplete timetable/);});
+test('network errors are translated instead of exposing browser-specific exceptions',async()=>{const original=globalThis.fetch;try{globalThis.fetch=async()=>{throw new TypeError('The string did not match the expected pattern.');};await assert.rejects(requestSchool(),/Unable to reach the schedule server/);}finally{globalThis.fetch=original;}});
