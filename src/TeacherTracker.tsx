@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { BookOpen, ChevronRight, Users } from 'lucide-react';
-import { DAYS, formatTime } from './schedule';
+import { DAYS, formatTime, schoolClock, SCHOOL_TIME_ZONE } from './schedule';
 import type { School } from './school';
 import { getTeacherStatus, getTeacherWeek, type TeacherLesson } from './teacherTracker';
 
@@ -21,14 +21,15 @@ export function TeacherList({ school, selectedCode, compact = false }: { school:
 function LessonSummary({ lessons }: { lessons: TeacherLesson[] }) {
  if (!lessons.length) return <span>No class scheduled</span>;
  const first = lessons[0];
- return <><strong>{lessons.map(lesson => lesson.className).join(' / ')}</strong><span>{first.start.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} · {formatTime(first.slot.start)} – {formatTime(first.slot.end)}</span></>;
+ return <><strong>{lessons.map(lesson => lesson.className).join(' / ')}</strong><span>{first.start.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', timeZone: SCHOOL_TIME_ZONE })} · {formatTime(first.slot.start)} – {formatTime(first.slot.end)}</span></>;
 }
 
 function TeacherSchedule({ school, code, now }: { school: School; code: string; now: Date }) {
- const [day, setDay] = useState(() => Math.min(4, Math.max(0, now.getDay() - 1)));
- const week = useMemo(() => getTeacherWeek(school, code), [school, code]);
- const today = now.getDay() - 1;
- const minute = now.getHours() * 60 + now.getMinutes();
+ const [day, setDay] = useState(() => Math.min(4, Math.max(0, schoolClock(now).weekday - 1)));
+ const date = schoolClock(now).date;
+ const week = useMemo(() => getTeacherWeek(school, code, new Date(`${date}T00:00:00+07:00`)), [school, code, date]);
+ const today = schoolClock(now).weekday - 1;
+ const minute = schoolClock(now).minuteNow;
  return <section className="schedule-panel teacher-week" aria-label="Teacher weekly schedule">
   <div className="schedule-heading"><div><h2>Weekly teaching schedule</h2><p>All assigned classes, Monday through Friday.</p></div></div>
   <div className="weekday-tabs" role="tablist" aria-label="Teaching weekday">{DAYS.map((name, index) => <button key={name} id={`teacher-tab-${index}`} role="tab" tabIndex={day === index ? 0 : -1} aria-selected={day === index} aria-controls="teacher-day-panel" className={day === index ? 'selected' : ''} onClick={() => setDay(index)} onKeyDown={event => {

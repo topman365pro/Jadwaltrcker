@@ -1,5 +1,6 @@
 import { DAYS } from './schedule';
 import { validateTeachers } from './teachers';
+import { validateBellOverrides } from './announcements';
 import type { Snapshot } from './useSharedSchool';
 export async function readApiResponse(response: Response): Promise<unknown> {
  let data: unknown;
@@ -30,7 +31,9 @@ export function parseSnapshot(value: unknown): Snapshot {
    if (!Array.isArray(slots) || slots.length !== 10 || slots.some(slot => typeof slot !== 'string')) return fail();
   }
  }
- return value as Snapshot;
+ let bellOverrides;
+ try { bellOverrides = validateBellOverrides(v.bellOverrides ?? []); } catch { return fail(); }
+ return { ...(value as Snapshot), bellOverrides };
 }
 export async function requestSchool(init: RequestInit = {}) {
  let response: Response;

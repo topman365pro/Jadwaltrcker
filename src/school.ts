@@ -1,8 +1,9 @@
 import initial from './data/initial-school.json';
 import { DAYS, parseContents, type Contents } from './schedule';
 import { normalizeCode, validateTeachers, type Teacher } from './teachers';
+import type { BellOverride } from './announcements';
 export { normalizeCode, validateTeachers, type Teacher } from './teachers';
-export type School = { teachers: Teacher[]; classes: Record<string, Contents>; selectedClass: string };
+export type School = { teachers: Teacher[]; classes: Record<string, Contents>; selectedClass: string; bellOverrides?: BellOverride[] };
 export const SCHOOL_KEY = 'dayline-school-v2';
 export const initialSchool = initial as School;
 export function codesIn(value:string):string[] {const s=value.trim();return /^\d{1,2}(?:\s*[,;/&]\s*\d{1,2})*$/.test(s)?s.split(/[,;/&]/).map(v=>String(Number(v.trim())).padStart(2,'0')):[];}

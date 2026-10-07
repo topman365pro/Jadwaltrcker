@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { blankContents } from './schedule';
+import { blankContents, schoolClock } from './schedule';
 import type { School } from './school';
 import { getTeacherStatus, getTeacherWeek } from './teacherTracker';
 
@@ -11,7 +11,7 @@ function fixture(): School {
  return { teachers: [], classes: { '10 A': a, '10 B': b }, selectedClass: '10 A' };
 }
 test('tracks a teacher across classes and switches at exact boundaries', () => {
- const status = getTeacherStatus(fixture(), '01', new Date(2026, 9, 5, 7, 45));
+ const status = getTeacherStatus(fixture(), '01', new Date("2026-10-05T07:45:00+07:00"));
  assert.deepEqual(status.previous.map(l => l.className), ['10 A']);
  assert.deepEqual(status.current.map(l => l.className), ['10 B']);
  assert.deepEqual(status.next.map(l => l.className), ['10 A']);
@@ -19,21 +19,21 @@ test('tracks a teacher across classes and switches at exact boundaries', () => {
 });
 test('breaks and weekends retain previous and next lessons', () => {
  const school = fixture();
- const duringBreak = getTeacherStatus(school, '01', new Date(2026, 9, 5, 9, 15));
+ const duringBreak = getTeacherStatus(school, '01', new Date("2026-10-05T09:15:00+07:00"));
  assert.equal(duringBreak.current.length, 0);
  assert.equal(duringBreak.previous[0].slot.number, 3);
- const weekend = getTeacherStatus(school, '01', new Date(2026, 9, 10, 12));
+ const weekend = getTeacherStatus(school, '01', new Date("2026-10-10T12:00:00+07:00"));
  assert.equal(weekend.current.length, 0);
- assert.equal(weekend.previous[0].start.getDay(), 5);
+ assert.equal(schoolClock(weekend.previous[0].start).weekday, 5);
  assert.equal(weekend.previous[0].slot.number, 8);
- assert.equal(weekend.next[0].start.getDay(), 1);
- assert.equal(weekend.next[0].start.getDate(), 12);
+ assert.equal(schoolClock(weekend.next[0].start).weekday, 1);
+ assert.equal(Number(schoolClock(weekend.next[0].start).date.slice(-2)), 12);
 });
 test('includes co-teaching codes, exposes simultaneous assignments and handles unassigned teachers', () => {
  const school = fixture();
  school.classes['10 B'].Monday[2] = '02';
- assert.equal(getTeacherStatus(school, '02', new Date(2026, 9, 5, 8, 30)).current.length, 2);
- assert.deepEqual(getTeacherStatus(school, '99', new Date(2026, 9, 5, 8)), { current: [], previous: [], next: [] });
+ assert.equal(getTeacherStatus(school, '02', new Date("2026-10-05T08:30:00+07:00")).current.length, 2);
+ assert.deepEqual(getTeacherStatus(school, '99', new Date("2026-10-05T08:00:00+07:00")), { current: [], previous: [], next: [] });
 });
 
 test('weekly schedule groups classes by timeslot, includes co-teaching and respects Friday hours', () => {

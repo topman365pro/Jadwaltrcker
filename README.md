@@ -3,7 +3,7 @@
 An installable school schedule tracker built with React, TypeScript, Vite, Vercel Functions, and PostgreSQL.
 
 - **Dashboard `/`:** current subject, teacher, timeslot, next lesson, weekday timetable, and class selector.
-- **Data management `/data`:** spreadsheet imports, teacher/subject editing, and per-class timetable editing.
+- **Data management `/data`:** spreadsheet imports, teacher/subject editing, per-class timetable editing, and temporary bell times from pasted announcements.
 - **Postgres:** shared teachers and timetables. The supplied school files seed 68 teachers, 33 classes, and 1,584 timetable entries.
 - **Browser:** class selection persists in local storage. An offline cache holds the last successfully fetched shared timetable; it is not the source of truth.
 
@@ -29,7 +29,7 @@ npm ci
 npm run db:migrate
 ```
 
-The migration runs in a transaction and only seeds when `dayline_meta` has no school record. Rerunning preserves existing shared data. Migration SQL is in `migrations/001_school.sql`. It creates namespaced tables `dayline_meta`, `dayline_teachers`, `dayline_classes`, and `dayline_timetable`.
+The migration runs in a transaction and only seeds when `dayline_meta` has no school record. Rerunning preserves existing shared data. Migration SQL is in `migrations/001_school.sql` and `migrations/002_bell_overrides.sql`. The second migration adds shared, dated bell schedules without changing existing lessons. It creates namespaced tables `dayline_meta`, `dayline_teachers`, `dayline_classes`, and `dayline_timetable`.
 
 ## Run locally
 
@@ -55,6 +55,7 @@ Open **Manage data**, enter the `ADMIN_TOKEN` from your private `.env` into **Ed
 - **Upload timetable:** `.xlsx`, `.xls`, or `.csv` in the supplied layout with `HARI`, `JAM KE`, and class headers such as `X.1`, `XI.1`, or `XII.1`. Indonesian and English weekdays work. Merged day cells and school-wide activities are expanded. Review the import before applying; it replaces class timetables and retains teacher mappings.
 - **Upload teachers:** columns `Code`, `Teacher`, `Subject`, or `Kode`, `Nama Guru`, `Mata Pelajaran`, in any order. Matching codes are updated; new codes are added; other teachers remain. Codes are normalized to two digits. Duplicate codes and incomplete rows are rejected.
 - **Teacher & subject list:** add, edit, or remove mappings. **Download spreadsheet** exports a compatible `.xlsx` file for further editing.
+- **Temporary bell times:** paste an INFO JAM KBM or INFO KURIKULUM announcement, choose **Preview announcement**, review the date, timeslots, and inferred breaks, then **Apply temporary bell times**. The shared override applies to all classes and teacher trackers for that date. Applying another announcement for the same date replaces it; **Remove** restores its default bell times. Lesson assignments remain unchanged. Full Indonesian/English month dates, day/month/year numeric dates, and ISO dates are supported, with dot or colon clocks. Invalid dates, missing/duplicate period numbers, and overlapping times are rejected. Past announcements can be previewed but cannot be applied.
 - **Edit schedule:** choose a class, then edit its weekday slots using teacher codes (e.g. `02` or `02, 06`) or plain activity text. Save or cancel before switching classes.
 
 Spreadsheet files are parsed in the browser (10 MB limit); the resulting validated school data is sent to the authenticated API. Database writes are transactional and parameterized. Class selection is never written to Postgres or shared with other users.
@@ -78,7 +79,7 @@ The original workbook contains code `69`, which is missing from the supplied PDF
 | 9 | 14:05–14:40 |
 | 10 | 14:40–15:15 |
 
-Monday–Thursday use all ten slots. Friday ends after slot 8 at 14:05. Slot 4 assumes the original `09:30–09:15` was a typo for `09:30–10:15`. The clock uses the device’s local timezone and updates every second. Breaks appear as current while active; the next card shows the next teaching timeslot, including the following school day after hours or on weekends.
+Monday–Thursday use all ten slots. Friday ends after slot 8 at 14:05. Slot 4 assumes the original `09:30–09:15` was a typo for `09:30–10:15`. The clock and all bell times use Surakarta time (`Asia/Jakarta`, WIB / UTC+7) and update every second. Temporary schedules expire at midnight WIB after their announced date; the default times return automatically even when using the offline cache or reopening the app later. Expired overrides are omitted from API reads and removed from storage on the next save. No scheduled cleanup job is needed. The weekly editor always uses the default times so its changes remain recurring lesson assignments. Breaks appear as current while active; the next card shows the next teaching timeslot, including the following school day after hours or on weekends.
 
 ## Install and use offline
 

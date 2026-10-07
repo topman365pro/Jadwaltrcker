@@ -1,6 +1,7 @@
 import { DAYS, type Contents } from '../src/schedule.js';
 import { validateTeachers, type Teacher } from '../src/teachers.js';
-export type SharedSchool={teachers:Teacher[];classes:Record<string,Contents>;revision:number};
+import { validateBellOverrides, type BellOverride } from '../src/announcements.js';
+export type SharedSchool={teachers:Teacher[];classes:Record<string,Contents>;revision:number;bellOverrides?:BellOverride[]};
 export class InputError extends Error {}
 export function validateSharedSchool(value:unknown):SharedSchool {
  if(!value||typeof value!=='object')throw new InputError('Expected school data.');
@@ -16,5 +17,7 @@ export function validateSharedSchool(value:unknown):SharedSchool {
  for(const [i,day] of DAYS.entries()){const slots=days[day];if(!Array.isArray(slots)||slots.length!==10||slots.some(s=>typeof s!=='string'||s.length>200))throw new InputError(`${name}: ${day} requires ten text entries (Friday's final two must be blank).`);if(i===4&&slots.slice(8).some(Boolean))throw new InputError(`${name}: Friday ends at timeslot 8.`);content[day]=[...slots];}
  classes[name]=content;
  }
- return {teachers,classes,revision:Number(v.revision)};
+ let bellOverrides:BellOverride[]|undefined;
+ if(v.bellOverrides!==undefined){try{bellOverrides=validateBellOverrides(v.bellOverrides);}catch(e){throw new InputError((e as Error).message);}}
+ return {teachers,classes,revision:Number(v.revision),...(bellOverrides!==undefined?{bellOverrides}:{})};
 }
